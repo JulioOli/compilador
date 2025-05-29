@@ -1,0 +1,43 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---- Virtual Environment ----
+ven/
+venv/
+.env/
+.venv/
+
+# ---- IDEs e Editores ----
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ---- Sistema Operacional ----
+.DS_Store
+Thumbs.db
+
+# ---- Arquivos de backup ----
+*.bak
+*.swp
+*.tmp
+
+# ---- Logs ----
+*.log
+
+# ---- Arquivos temporários ----
+*.~*
+
+# ---- Tkinter cache (caso crie imagens temporárias, ex: ícones etc) ----
+tkinter_cache/
+
+# ---- Arquivos de saída / builds ----
+dist/
+build/
+*.egg-info/
+
+# ---- Arquivos específicos do projeto ----
+aaa.txt
+LALG.pdf

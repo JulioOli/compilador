@@ -1,0 +1,4 @@
+tkinter
+re
+numpy==1.23.5
+requests==2.28.1
