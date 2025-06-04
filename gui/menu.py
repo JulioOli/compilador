@@ -1,7 +1,17 @@
 from tkinter import Menu, filedialog
 from compiler.executor import executar_analise
+from gui.utils import limpar_tags_erro
 
 import tkinter as tk
+
+# ------------------------------------------------------------------------------
+# Função auxiliar para limpar tags de erro
+# ------------------------------------------------------------------------------
+def limpar_tags_erro(text_area):
+    """Remove todas as tags de erro do editor de texto."""
+    for tag in text_area.tag_names():
+        if tag == 'erro_linha':
+            text_area.tag_remove(tag, "1.0", tk.END)
 
 # ------------------------------------------------------------------------------
 # 4. Criação do Menu
@@ -14,7 +24,7 @@ def criar_menu(root, text_area, tree, text_log, tree_sintatica):
 
     # Menu "Arquivo"
     menu_arquivo = tk.Menu(menubar, tearoff=False)
-    menu_arquivo.add_command(label="Novo")
+    menu_arquivo.add_command(label="Novo", command=lambda: novo_arquivo(text_area, tree, text_log))
     menu_arquivo.add_command(label="Abrir", command=lambda: abrir_arquivo(text_area, tree, text_log, tree_sintatica))
     menu_arquivo.add_command(label="Salvar")
     menu_arquivo.add_separator()
@@ -64,6 +74,27 @@ def criar_menu(root, text_area, tree, text_log, tree_sintatica):
     root.config(menu=menubar)
 
 # ------------------------------------------------------------------------------
+# Função para criar um novo arquivo
+# ------------------------------------------------------------------------------
+def novo_arquivo(text_area, tree, text_log):
+    """Cria um novo arquivo em branco, limpando o editor e as marcações de erro."""
+    # Limpa a área de texto
+    text_area.delete("1.0", tk.END)
+    
+    # Remove todas as tags de erro
+    limpar_tags_erro(text_area)
+    
+    # Habilita, limpa e desabilita o log
+    text_log.config(state='normal')
+    text_log.delete("1.0", tk.END)
+    text_log.insert("1.0", "Novo arquivo criado\n")
+    text_log.config(state='disabled', foreground='black')
+    
+    # Limpa a tabela de lexemas
+    for item in tree.get_children():
+        tree.delete(item)
+
+# ------------------------------------------------------------------------------
 # 5. Abertura de Arquivo (para carregar texto no editor)
 # ------------------------------------------------------------------------------
 def abrir_arquivo(text_area, tree, text_log, tree_sintatica):
@@ -75,6 +106,9 @@ def abrir_arquivo(text_area, tree, text_log, tree_sintatica):
         try:
             # Limpa a área de texto
             text_area.delete("1.0", tk.END)
+            
+            # Remove todas as tags de erro
+            limpar_tags_erro(text_area)
             
             # Habilita, limpa e desabilita o log
             text_log.config(state='normal')

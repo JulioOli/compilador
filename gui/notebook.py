@@ -23,6 +23,13 @@ def criar_bloco_inferior(root, tabela_sintatica):
     frame_lexemas = ttk.Frame(notebook)
     colunas_lexemas = ("Lexema", "Token", "Erro", "Linha", "ColIni", "ColFim")
     tree_lexemas = ttk.Treeview(frame_lexemas, columns=colunas_lexemas, show="headings")
+    
+    # Configura o estilo para a tag 'erro'
+    style = ttk.Style()
+    style.configure("Treeview", rowheight=25)
+    
+    # Configura a tag 'erro' para destacar linhas com erro em vermelho
+    tree_lexemas.tag_configure('erro', background='#FF8080', foreground='black')
 
     # Configura o alinhamento e largura das colunas da tabela de lexemas
     for col in colunas_lexemas:

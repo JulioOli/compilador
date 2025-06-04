@@ -2,6 +2,7 @@ from compiler.lexer import analisar_expressao
 from compiler.syntatic_analyzer import analisar_declaracoes, tabela_sintatica
 from datetime import datetime
 import tkinter as tk
+from gui.utils import limpar_tags_erro
 
 print("\nImportando módulos...")
 print(f"Tabela sintática importada tem {len(tabela_sintatica)} não-terminais")
@@ -18,6 +19,9 @@ def popular_tabela_lexemas(tree, tokens):
     """
     Recebe o Treeview (tabela) e a lista de tokens gerada por analisar_expressao().
     Limpa a tabela e insere os novos valores.
+    
+    Tokens com erros (campo 'erro' preenchido ou tipo 'DESCONHECIDO', 'NUMERO_INVALIDO', 
+    'IDENTIFICADOR_INVALIDO') são destacados em vermelho na tabela usando a tag 'erro'.
     """
     # Remove itens antigos
     for item in tree.get_children():
@@ -26,8 +30,14 @@ def popular_tabela_lexemas(tree, tokens):
     # Insere os novos tokens
         
     for t in tokens:
-        # Define a tag se for um token desconhecido
-        tags = ('erro',) if t['token'] == "DESCONHECIDO" else ()
+        # Define a tag para tokens com erro
+        tem_erro = (
+            t['token'] == "DESCONHECIDO" or 
+            t['token'] == "NUMERO_INVALIDO" or 
+            t['token'] == "IDENTIFICADOR_INVALIDO" or 
+            (t['erro'] and len(t['erro']) > 0)
+        )
+        tags = ('erro',) if tem_erro else ()
         
         tree.insert(
             "", "end", 
@@ -148,6 +158,9 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
     expressao = text_area.get("1.0", tk.END).strip()
     print(f"Texto para análise: {expressao[:50]}...")  # Mostra os primeiros 50 caracteres
     
+    # Remove todas as tags de erro anteriores
+    limpar_tags_erro(text_area)
+    
     msg = ''
     tokens = None
     
@@ -195,8 +208,28 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
         # Limpa a tabela de lexemas antes de inserir novos resultados
         popular_tabela_lexemas(tree, tokens)
         
-        # Verifica se há erros nos tokens
-        has_errors = any(token['erro'] for token in tokens)
+        # Conjunto para armazenar as linhas com erro (evita duplicatas)
+        linhas_com_erro = set()
+        
+        # Verifica se há erros nos tokens e coleta as linhas com erro
+        for token in tokens:
+            tem_erro = (
+                token['token'] == "DESCONHECIDO" or 
+                token['token'] == "NUMERO_INVALIDO" or 
+                token['token'] == "IDENTIFICADOR_INVALIDO" or 
+                (token['erro'] and len(token['erro']) > 0)
+            )
+            if tem_erro:
+                linhas_com_erro.add(token['linha'])
+        
+        # Aplica a tag de erro às linhas identificadas
+        for linha in linhas_com_erro:
+            inicio_linha = f"{linha}.0"
+            fim_linha = f"{linha}.end"
+            text_area.tag_add('erro_linha', inicio_linha, fim_linha)
+        
+        # Verifica se há erros nos tokens para atualizar o log
+        has_errors = len(linhas_com_erro) > 0
         
         # Limpa o Log de Compilação
         text_log.config(state='normal')  # Habilita a edição
@@ -206,7 +239,7 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
         
         # Exibe a mensagem apropriada no Log de Compilação
         if has_errors:
-            text_log.insert('2.0', get_timestamp() + "Erro de análise\n")
+            text_log.insert('2.0', get_timestamp() + f"Erro de análise em {len(linhas_com_erro)} linha(s)\n")
             text_log.config(foreground='red')  # Define a cor do texto como vermelho
         else:
             text_log.insert('2.0', get_timestamp() + "Analise concluída com sucesso!\n")

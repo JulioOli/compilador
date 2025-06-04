@@ -28,6 +28,9 @@ def criar_area_principal(root):
     text_area = tk.Text(frame_texto, wrap="none", height=35)  # Aumentando para 35 linhas
     text_area.grid(row=0, column=1, sticky="nsew")
     
+    # Configura a tag para destacar linhas com erro
+    text_area.tag_configure('erro_linha', background='#FFCDD2')
+    
     # Scrollbars vertical e horizontal
     vsb = ttk.Scrollbar(frame_texto, orient="vertical")
     hsb = ttk.Scrollbar(frame_texto, orient="horizontal")
