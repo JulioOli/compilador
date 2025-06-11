@@ -1,0 +1,28 @@
+program teste;
+
+int a, b, c;
+boolean flag, teste;
+
+begin
+  a := -10;
+  b := 20;
+  c := 30;
+  
+  // Erro sintático na linha abaixo (falta o then)
+  if (flag) 
+  begin
+    a := a + 1;
+  end;
+  
+  // Erro sintático na linha abaixo (falta o ponto e vírgula)
+  b := 5 * c
+  
+  // Erro sintático na linha abaixo (operador inválido)
+  c := a @ b;
+  
+  flag := true;
+  teste := false;
+  
+  read(a);
+  write(b);
+end. 

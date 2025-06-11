@@ -176,6 +176,7 @@ def analisar_declaracoes(tokens):
     })
 
     erros = []
+    max_erros = 5  # Limite de erros antes de abortar a análise
 
     def token_atual():
         # Protege para não sair do índice
@@ -225,9 +226,15 @@ def analisar_declaracoes(tokens):
                         pilha.append(simbolo)
                 print(f"Nova pilha: {pilha}")
             else:
-                erro = f"Erro sintático: token inesperado '{lexema_atual()}' na linha {linha_atual()}. Tentando recuperação..."
-                print(erro)
-                erros.append(erro)
+                erro_linha = linha_atual()
+                erro_msg = f"Erro sintático: token inesperado '{lexema_atual()}' na linha {erro_linha}. Esperava um token válido para '{topo}'."
+                print(erro_msg)
+                erros.append((erro_msg, erro_linha))
+
+                # Se atingiu o limite de erros, lança uma exceção com todos os erros
+                if len(erros) >= max_erros:
+                    erro_completo = "\n".join([f"{msg} (linha {linha})" for msg, linha in erros])
+                    raise SyntaxError(erro_completo)
 
                 sync_set = sync_tokens.get(topo, ['$'])
                 print(f"Conjunto de sincronização para {topo}: {sync_set}")
@@ -245,23 +252,29 @@ def analisar_declaracoes(tokens):
 
         else:
             # topo é terminal mas diferente do atual (erro)
-            erro = f"Erro sintático: token inesperado '{lexema_atual()}' na linha {linha_atual()}. Esperava '{topo}'. Tentando sincronizar..."
-            print(erro)
-            erros.append(erro)
-
-            # Descarta token atual para tentar sincronizar
+            erro_linha = linha_atual()
+            erro_msg = f"Erro sintático: token inesperado '{lexema_atual()}' na linha {erro_linha}. Esperava '{topo}'."
+            print(erro_msg)
+            erros.append((erro_msg, erro_linha))
+            
+            # Se atingiu o limite de erros, lança uma exceção com todos os erros
+            if len(erros) >= max_erros:
+                erro_completo = "\n".join([f"{msg} (linha {linha})" for msg, linha in erros])
+                raise SyntaxError(erro_completo)
+            
+            # Descarta o token atual e continua
+            print(f"Token descartado, continuando...")
             pos += 1
-
-            # Se passou do fim, para o loop
-            if pos > tamanho:
-                print("Fim dos tokens durante recuperação, parando...")
+            
+            # Se chegou no fim, sai do loop
+            if pos >= tamanho:
+                print("Fim dos tokens após erro, parando...")
                 break
-
-            print("Token descartado, continuando...")
-            # Não empilha nada, tenta continuar
-
+    
+    # Se encontrou erros, mas não atingiu o limite, lança uma exceção com todos os erros
     if erros:
-        raise SyntaxError('\n'.join(erros))
+        erro_completo = "\n".join([f"{msg} (linha {linha})" for msg, linha in erros])
+        raise SyntaxError(erro_completo)
 
     print("Análise sintática concluída com sucesso!")
     return True

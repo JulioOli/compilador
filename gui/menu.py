@@ -5,15 +5,6 @@ from gui.utils import limpar_tags_erro
 import tkinter as tk
 
 # ------------------------------------------------------------------------------
-# Função auxiliar para limpar tags de erro
-# ------------------------------------------------------------------------------
-def limpar_tags_erro(text_area):
-    """Remove todas as tags de erro do editor de texto."""
-    for tag in text_area.tag_names():
-        if tag == 'erro_linha':
-            text_area.tag_remove(tag, "1.0", tk.END)
-
-# ------------------------------------------------------------------------------
 # 4. Criação do Menu
 # ------------------------------------------------------------------------------
 def criar_menu(root, text_area, tree, text_log, tree_sintatica):

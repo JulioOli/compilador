@@ -163,36 +163,66 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
     
     msg = ''
     tokens = None
+    linhas_com_erro = set()  # Conjunto para armazenar as linhas com erro (evita duplicatas)
     
     try:
         # Sempre executa a análise léxica primeiro para obter os tokens
         tokens = analisar_expressao(expressao)
         print(f"Análise léxica gerou {len(tokens)} tokens")
         
-        if options == "executar":
+        # Verifica se há erros nos tokens e coleta as linhas com erro léxico
+        for token in tokens:
+            tem_erro = (
+                token['token'] == "DESCONHECIDO" or 
+                token['token'] == "NUMERO_INVALIDO" or 
+                token['token'] == "IDENTIFICADOR_INVALIDO" or 
+                (token['erro'] and len(token['erro']) > 0)
+            )
+            if tem_erro:
+                linhas_com_erro.add(token['linha'])
+        
+        if options == "executar" or options == "analise_semantica":
             print("Iniciando análise sintática...")
-            # Executa a análise léxica e sintática
+            # Executa a análise sintática
             analisar_declaracoes(tokens)
-            msg = "Análise sintática concluída com sucesso!"
-            # Preenche a tabela sintática apenas na execução da análise sintática
-            print("Chamando popular_tabela_sintatica...")
-            print(f"Tabela sintática tem {len(tabela_sintatica)} não-terminais")
-            print(f"Não-terminais: {sorted(tabela_sintatica.keys())}")
-            popular_tabela_sintatica(tree_sintatica)
-            print("Retornou da popular_tabela_sintatica")
+            
+            if options == "executar":
+                msg = "Análise sintática concluída com sucesso!"
+                # Preenche a tabela sintática apenas na execução da análise sintática
+                print("Chamando popular_tabela_sintatica...")
+                print(f"Tabela sintática tem {len(tabela_sintatica)} não-terminais")
+                print(f"Não-terminais: {sorted(tabela_sintatica.keys())}")
+                popular_tabela_sintatica(tree_sintatica)
+                print("Retornou da popular_tabela_sintatica")
+            else:
+                msg = "Análise semântica concluída com sucesso!"
             
         elif options == "analise_lexica":
             msg = "Análise léxica concluída com sucesso!"
             
-        elif options == "analise_semantica":
-            analisar_declaracoes(tokens)
-            msg = "Análise semântica concluída com sucesso!"
-            
     except SyntaxError as e:
+        print(f"Erro de sintaxe capturado: {str(e)}")
+        
+        # Extrair o número da linha do erro (se disponível na mensagem)
+        erro_msg = str(e)
+        import re
+        linha_match = re.search(r'linha (\d+)', erro_msg)
+        if linha_match:
+            num_linha = int(linha_match.group(1))
+            print(f"Erro sintático na linha {num_linha}")
+            linhas_com_erro.add(num_linha)
+        
         text_log.config(state='normal')
         text_log.delete('1.0', tk.END)
         text_log.insert('1.0', f"Erro de sintaxe: {str(e)}\n")
         text_log.config(foreground='red', state='disabled')
+        
+        # Aplica a tag de erro às linhas identificadas com erro sintático
+        for linha in linhas_com_erro:
+            inicio_linha = f"{linha}.0"
+            fim_linha = f"{linha}.end"
+            text_area.tag_add('erro_linha', inicio_linha, fim_linha)
+            
         return
     except Exception as e:
         print(f"Erro inesperado: {str(e)}")
@@ -207,20 +237,6 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
     if tokens:  # Só popula a tabela de lexemas se tivermos tokens
         # Limpa a tabela de lexemas antes de inserir novos resultados
         popular_tabela_lexemas(tree, tokens)
-        
-        # Conjunto para armazenar as linhas com erro (evita duplicatas)
-        linhas_com_erro = set()
-        
-        # Verifica se há erros nos tokens e coleta as linhas com erro
-        for token in tokens:
-            tem_erro = (
-                token['token'] == "DESCONHECIDO" or 
-                token['token'] == "NUMERO_INVALIDO" or 
-                token['token'] == "IDENTIFICADOR_INVALIDO" or 
-                (token['erro'] and len(token['erro']) > 0)
-            )
-            if tem_erro:
-                linhas_com_erro.add(token['linha'])
         
         # Aplica a tag de erro às linhas identificadas
         for linha in linhas_com_erro:
