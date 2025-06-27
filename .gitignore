@@ -37,3 +37,5 @@ tkinter_cache/
 dist/
 build/
 *.egg-info/
+*.pyc
+__pycache__/
