@@ -1,8 +1,11 @@
+from compiler.lexer import analisar_expressao
+from compiler.syntatic_analyzer import analisar_declaracoes
+from compiler.semantic_analyzer import build_symbol_table, check_semantics
+from compiler.bytecode import generate_bytecode
 from compiler.syntatic import tabela_sintatica
 from lark import Lark, UnexpectedInput
 from datetime import datetime
 import tkinter as tk
-from lark import Lark
 
 # Função de timestamp
 def get_timestamp():
@@ -52,6 +55,7 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
     """
     Lê o texto da área principal, analisa e exibe o resultado na Tabela de Lexemas.
     Também atualiza o Log de Compilação com mensagens de sucesso ou erro.
+    Inclui checagem semântica de identificadores e procedures.
     """
     print(f"\nExecutando análise com opção: {options}")
     
@@ -67,34 +71,59 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
         tokens = analisar_expressao(expressao)
         print(f"Análise léxica gerou {len(tokens)} tokens")
         
-
         if options == "executar":
-            print("Iniciando análise sintática com Lark (com múltiplos erros)...")
-            erros_sintaticos = analisar_pascal_lark_multierros_custom(expressao)
-            mostrar_erros_no_log(text_log, erros_sintaticos)
-            if not erros_sintaticos:
-                msg = "Análise sintática com Lark concluída com sucesso!"
-                text_log.config(state='normal')
-                text_log.insert('2.0', get_timestamp() + msg + "\n")
-                text_log.config(foreground='green')
-                text_log.config(state='disabled')
-                print("Chamando popular_tabela_sintatica...")
-                popular_tabela_sintatica(tree_sintatica)
-            # Se houver erro, já mostrou no log, não faz mais nada
-
+            print("Iniciando análise completa (sintática + semântica + bytecode)...")
+            
+            # Análise sintática LL(1)
+            analisar_declaracoes(tokens)
+            
+            # Construção da tabela de símbolos e checagem semântica
+            symtab = build_symbol_table(tokens)
+            semantic_errors = check_semantics(tokens, symtab)
+            if semantic_errors:
+                raise SyntaxError("\n".join(semantic_errors))
+            
+            # Geração de bytecode
+            bytecode = generate_bytecode(tokens)
+            
+            # Exibe bytecode no log
+            text_log.config(state='normal')
+            text_log.delete('1.0', tk.END)
+            text_log.insert('1.0', "Bytecode gerado:\n" + "\n".join(bytecode))
+            text_log.config(foreground='black', state='disabled')
+            
+            # Salva resultado
+            salvar_resultado(bytecode)
+            
+            # Atualiza tabela sintática
+            popular_tabela_sintatica(tree_sintatica)
+            
+            msg = "Análise completa concluída com sucesso!"
             
         elif options == "analise_lexica":
             msg = "Análise léxica concluída com sucesso!"
             
         elif options == "analise_semantica":
-            # Adapte conforme a lógica semântica do seu compilador
+            # Análise sintática LL(1)
+            analisar_declaracoes(tokens)
+            
+            # Construção da tabela de símbolos e checagem semântica
+            symtab = build_symbol_table(tokens)
+            semantic_errors = check_semantics(tokens, symtab)
+            if semantic_errors:
+                raise SyntaxError("\n".join(semantic_errors))
+            
             msg = "Análise semântica concluída com sucesso!"
             
     except SyntaxError as e:
+        # Exibe erros sintáticos ou semânticos
         text_log.config(state='normal')
         text_log.delete('1.0', tk.END)
         text_log.insert('1.0', f"Erro de sintaxe: {str(e)}\n")
         text_log.config(foreground='red', state='disabled')
+        # Atualiza tabela de lexemas mesmo em erro
+        if tokens:
+            popular_tabela_lexemas(tree, tokens)
         return
     except Exception as e:
         print(f"Erro inesperado: {str(e)}")
@@ -128,56 +157,8 @@ def executar_analise(text_area, tree, text_log, options, tree_sintatica):
         
         text_log.config(state='disabled')  # Desabilita a edição
 
-def mostrar_erros_no_log(text_log, lista_erros):
-    text_log.config(state='normal')
-    text_log.delete('1.0', tk.END)
-    if not lista_erros:
-        text_log.insert("1.0", "Nenhum erro sintático encontrado! :)\n")
-        text_log.config(foreground='green')
-    else:
-        for erro in lista_erros:
-            text_log.insert(tk.END, erro + "\n")
-        text_log.config(foreground='red')
-    text_log.config(state='disabled')
-
-def analisar_pascal_lark_multierros_custom(codigo_fonte, caminho_gramatica="grammar.lark"):
-    with open(caminho_gramatica, "r", encoding="utf-8") as f:
-        gramatica = f.read()
-    parser = Lark(gramatica, start="start", parser="lalr")
-    erros = []
-
-    try:
-        parser.parse(codigo_fonte)
-        # Se chegou aqui, não tem erro sintático
-        return []
-    except UnexpectedInput as e:
-        # Caso de erro, apenas 1º erro (ou adapte para multi-erro se quiser!)
-        trecho = e.get_context(codigo_fonte).replace('\n', '')
-        erro_msg = (
-            f"Erro sintático na linha {e.line}, coluna {e.column}: "
-            f"símbolo inesperado próximo de \"{trecho.strip()}\"."
-        )
-        erros.append(erro_msg)
-        return erros
-
-def analisar_expressao(codigo_fonte, caminho_gramatica="grammar.lark"):
-    with open(caminho_gramatica, "r", encoding="utf-8") as f:
-        gramatica = f.read()
-    parser = Lark(gramatica, start="start", parser="lalr")
-    erros = []
-
-    linhas = codigo_fonte.split('\n')
-    for i, linha in enumerate(linhas, start=1):
-        try:
-            if linha.strip():
-                parser.parse(linha)
-        except UnexpectedInput as e:
-            # Mensagem personalizada — sem detalhes internos do Lark!
-            trecho = e.get_context(linha).replace('\n', '')
-            erro_msg = (
-                f"Erro sintático na linha {i}, coluna {e.column}: "
-                f"símbolo inesperado próximo de \"{trecho.strip()}\"."
-            )
-            erros.append(erro_msg)
-
-    return erros
+def salvar_resultado(bytecode):
+    """Salva o bytecode no arquivo 'resultado.by' na raiz do projeto."""
+    with open('resultado.by', 'w', encoding='utf-8') as f:
+        for ins in bytecode:
+            f.write(ins + '\n')
